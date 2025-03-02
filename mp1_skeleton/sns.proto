@@ -64,3 +64,4 @@ message Message {
   // Time the message was sent
   google.protobuf.Timestamp timestamp = 3;
 }
+

@@ -9,64 +9,63 @@
 #include "client.h"
 
 #include "sns.grpc.pb.h"
+using csce438::ListReply;
+using csce438::Message;
+using csce438::Reply;
+using csce438::Request;
+using csce438::SNSService;
 using grpc::Channel;
 using grpc::ClientContext;
 using grpc::ClientReader;
 using grpc::ClientReaderWriter;
 using grpc::ClientWriter;
 using grpc::Status;
-using csce438::Message;
-using csce438::ListReply;
-using csce438::Request;
-using csce438::Reply;
-using csce438::SNSService;
 
-void sig_ignore(int sig) {
+void sig_ignore(int sig)
+{
   std::cout << "Signal caught " + sig;
 }
 
-Message MakeMessage(const std::string& username, const std::string& msg) {
-    Message m;
-    m.set_username(username);
-    m.set_msg(msg);
-    google::protobuf::Timestamp* timestamp = new google::protobuf::Timestamp();
-    timestamp->set_seconds(time(NULL));
-    timestamp->set_nanos(0);
-    m.set_allocated_timestamp(timestamp);
-    return m;
+Message MakeMessage(const std::string &username, const std::string &msg)
+{
+  Message m;
+  m.set_username(username);
+  m.set_msg(msg);
+  google::protobuf::Timestamp *timestamp = new google::protobuf::Timestamp();
+  timestamp->set_seconds(time(NULL));
+  timestamp->set_nanos(0);
+  m.set_allocated_timestamp(timestamp);
+  return m;
 }
-
 
 class Client : public IClient
 {
 public:
-  Client(const std::string& hname,
-	 const std::string& uname,
-	 const std::string& p)
-    :hostname(hname), username(uname), port(p) {}
+  Client(const std::string &hname,
+         const std::string &uname,
+         const std::string &p)
+      : hostname(hname), username(uname), port(p) {}
 
-  
 protected:
   virtual int connectTo();
-  virtual IReply processCommand(std::string& input);
+  virtual IReply processCommand(std::string &input);
   virtual void processTimeline();
 
 private:
   std::string hostname;
   std::string username;
   std::string port;
-  
+
   // You can have an instance of the client stub
   // as a member variable.
   std::unique_ptr<SNSService::Stub> stub_;
-  
+
   IReply Login();
   IReply List();
   IReply Follow(const std::string &username);
   IReply UnFollow(const std::string &username);
-  void   Timeline(const std::string &username);
+  void Timeline(const std::string &username);
 };
-
 
 ///////////////////////////////////////////////////////////
 //
@@ -80,20 +79,23 @@ int Client::connectTo()
   // to call any service methods in those functions.
   // Please refer to gRpc tutorial how to create a stub.
   // ------------------------------------------------------------
-    
-///////////////////////////////////////////////////////////
-// YOUR CODE HERE
-//////////////////////////////////////////////////////////
 
-    return 1;
+  std::string login_info = hostname + ":" + port;
+  stub_ = SNSService::NewStub(grpc::CreateChannel(login_info, grpc::InsecureChannelCredentials()));
+  IReply reply = Login();
+  if (reply.comm_status != SUCCESS)
+  {
+    return -1;
+  }
+  return 1;
 }
 
-IReply Client::processCommand(std::string& input)
+IReply Client::processCommand(std::string &input)
 {
   // ------------------------------------------------------------
   // GUIDE 1:
   // In this function, you are supposed to parse the given input
-  // command and create your own message so that you call an 
+  // command and create your own message so that you call an
   // appropriate service method. The input command will be one
   // of the followings:
   //
@@ -102,7 +104,7 @@ IReply Client::processCommand(std::string& input)
   // LIST
   // TIMELINE
   // ------------------------------------------------------------
-  
+
   // ------------------------------------------------------------
   // GUIDE 2:
   // Then, you should create a variable of IReply structure
@@ -110,13 +112,12 @@ IReply Client::processCommand(std::string& input)
   // the result. Finally you can finish this function by returning
   // the IReply.
   // ------------------------------------------------------------
-  
-  
+
   // ------------------------------------------------------------
   // HINT: How to set the IReply?
   // Suppose you have "FOLLOW" service method for FOLLOW command,
   // IReply can be set as follow:
-  // 
+  //
   //     // some codes for creating/initializing parameters for
   //     // service method
   //     IReply ire;
@@ -127,133 +128,284 @@ IReply Client::processCommand(std::string& input)
   //     } else {
   //         ire.comm_status = FAILURE_NOT_EXISTS;
   //     }
-  //      
+  //
   //      return ire;
-  // 
-  // IMPORTANT: 
-  // For the command "LIST", you should set both "all_users" and 
+  //
+  // IMPORTANT:
+  // For the command "LIST", you should set both "all_users" and
   // "following_users" member variable of IReply.
   // ------------------------------------------------------------
 
-    IReply ire;
-    
-    /*********
-    YOUR CODE HERE
-    **********/
+  IReply ire;
 
-    return ire;
+  if (input.size() >= 6 && input.substr(0, 6) == "FOLLOW")
+  {
+    std::string arg = input.substr(7);
+    ire = Follow(arg);
+  }
+  else if (input.size() >= 8 && input.substr(0, 8) == "UNFOLLOW")
+  {
+    std::string arg = input.substr(9);
+    ire = UnFollow(arg);
+  }
+  else if (input == "LIST")
+  {
+    ire = List();
+  }
+  else if (input == "TIMELINE")
+  {
+    ire.grpc_status = Status::OK;
+    ire.comm_status = SUCCESS;
+  }
+  else
+  {
+    ire.comm_status = FAILURE_INVALID;
+  }
+
+  return ire;
 }
-
 
 void Client::processTimeline()
 {
-    Timeline(username);
+  Timeline(username);
 }
 
 // List Command
-IReply Client::List() {
+IReply Client::List()
+{
+  IReply ire;
 
-    IReply ire;
+  ClientContext context;
+  Request request;
+  request.set_username(username);
+  ListReply list_reply;
 
-    /*********
-    YOUR CODE HERE
-    **********/
+  Status status = stub_->List(&context, request, &list_reply);
+  ire.grpc_status = status;
+  if (status.ok())
+  {
+    ire.comm_status = SUCCESS;
+    for (const auto &user : list_reply.all_users())
+    {
+      ire.all_users.push_back(user);
+    }
+    for (const auto &follower : list_reply.followers())
+    {
+      ire.followers.push_back(follower);
+    }
+  }
+  else
+  {
+    ire.comm_status = FAILURE_UNKNOWN;
+  }
 
-    return ire;
+  return ire;
 }
 
-// Follow Command        
-IReply Client::Follow(const std::string& username2) {
+// Follow Command
+IReply Client::Follow(const std::string &username2)
+{
+  IReply ire;
 
-    IReply ire; 
-      
-    /***
-    YOUR CODE HERE
-    ***/
+  ClientContext context;
+  Request request;
+  request.set_username(username);
+  request.add_arguments(username2);
+  Reply reply;
 
-    return ire;
+  Status status = stub_->Follow(&context, request, &reply);
+  ire.grpc_status = status;
+
+  if (status.ok())
+  {
+    if (reply.msg() == "follow successful")
+    {
+      ire.comm_status = SUCCESS;
+    }
+    else if (reply.msg() == "cannot follow yourself" || reply.msg() == "already following")
+    {
+      ire.comm_status = FAILURE_ALREADY_EXISTS;
+    }
+    else if (reply.msg() == "user to follow does not exist")
+    {
+      ire.comm_status = FAILURE_INVALID_USERNAME;
+    }
+    else
+    {
+      ire.comm_status = FAILURE_UNKNOWN;
+    }
+  }
+  else
+  {
+    ire.comm_status = FAILURE_UNKNOWN;
+  }
+
+  return ire;
 }
 
-// UNFollow Command  
-IReply Client::UnFollow(const std::string& username2) {
+// UNFollow Command
+IReply Client::UnFollow(const std::string &username2)
+{
+  IReply ire;
 
-    IReply ire;
+  ClientContext context;
+  Request request;
+  request.set_username(username);
+  request.add_arguments(username2);
+  Reply reply;
 
-    /***
-    YOUR CODE HERE
-    ***/
+  Status status = stub_->UnFollow(&context, request, &reply);
+  ire.grpc_status = status;
 
-    return ire;
+  if (status.ok())
+  {
+    if (reply.msg() == "unfollow successful")
+    {
+      ire.comm_status = SUCCESS;
+    }
+    else if (reply.msg() == "not following")
+    {
+      ire.comm_status = FAILURE_INVALID_USERNAME;
+    }
+    else
+    {
+      ire.comm_status = FAILURE_UNKNOWN;
+    }
+  }
+  else
+  {
+    ire.comm_status = FAILURE_UNKNOWN;
+  }
+
+  return ire;
 }
 
-// Login Command  
-IReply Client::Login() {
+// Login Command
+IReply Client::Login()
+{
+  IReply ire;
 
-    IReply ire;
-  
-    /***
-     YOUR CODE HERE
-    ***/
+  Request request;
+  request.set_username(username);
+  Reply reply;
+  ClientContext context;
 
-    return ire;
+  Status status = stub_->Login(&context, request, &reply);
+  ire.grpc_status = status;
+
+  if (status.ok())
+  {
+    if (reply.msg() == "login succeeded" || reply.msg() == "login succeeded: new user created")
+    {
+      ire.comm_status = SUCCESS;
+    }
+    else if (reply.msg() == "user already connected")
+    {
+      ire.comm_status = FAILURE_ALREADY_EXISTS;
+    }
+    else
+    {
+      ire.comm_status = FAILURE_UNKNOWN;
+    }
+  }
+  else
+  {
+    ire.comm_status = FAILURE_UNKNOWN;
+  }
+
+  return ire;
 }
 
 // Timeline Command
-void Client::Timeline(const std::string& username) {
+void Client::Timeline(const std::string &username)
+{
 
-    // ------------------------------------------------------------
-    // In this function, you are supposed to get into timeline mode.
-    // You may need to call a service method to communicate with
-    // the server. Use getPostMessage/displayPostMessage functions 
-    // in client.cc file for both getting and displaying messages 
-    // in timeline mode.
-    // ------------------------------------------------------------
+  // ------------------------------------------------------------
+  // In this function, you are supposed to get into timeline mode.
+  // You may need to call a service method to communicate with
+  // the server. Use getPostMessage/displayPostMessage functions
+  // in client.cc file for both getting and displaying messages
+  // in timeline mode.
+  // ------------------------------------------------------------
 
-    // ------------------------------------------------------------
-    // IMPORTANT NOTICE:
-    //
-    // Once a user enter to timeline mode , there is no way
-    // to command mode. You don't have to worry about this situation,
-    // and you can terminate the client program by pressing
-    // CTRL-C (SIGINT)
-    // ------------------------------------------------------------
-  
-    /***
-    YOUR CODE HERE
-    ***/
+  // ------------------------------------------------------------
+  // IMPORTANT NOTICE:
+  //
+  // Once a user enter to timeline mode , there is no way
+  // to command mode. You don't have to worry about this situation,
+  // and you can terminate the client program by pressing
+  // CTRL-C (SIGINT)
+  // ------------------------------------------------------------
 
+  ClientContext context;
+  std::shared_ptr<ClientReaderWriter<Message, Message>> stream(stub_->Timeline(&context));
+
+  Message init = MakeMessage(username, "INIT");
+  stream->Write(init);
+
+  Message initial_posts;
+  while (stream->Read(&initial_posts) && initial_posts.msg() != "DONE")
+  {
+    google::protobuf::Timestamp timestamp = initial_posts.timestamp();
+    std::time_t time = timestamp.seconds();
+    displayPostMessage(initial_posts.username(), initial_posts.msg(), time);
+  }
+
+  std::thread writer_thread([stream, this, username](){
+    while (true) {
+      std::string message = getPostMessage();
+      Message msg = MakeMessage(username, message);
+      stream->Write(msg);
+    }
+  });
+
+  std::thread reader_thread([stream, this](){
+    Message msg;
+    while (stream->Read(&msg)) {
+      google::protobuf::Timestamp timestamp = msg.timestamp();
+        std::time_t time = timestamp.seconds();
+        displayPostMessage(msg.username(), msg.msg(), time);
+    } 
+  });
+
+  writer_thread.join();
+  reader_thread.join();
 }
-
-
 
 //////////////////////////////////////////////
 // Main Function
 /////////////////////////////////////////////
-int main(int argc, char** argv) {
+int main(int argc, char **argv)
+{
 
   std::string hostname = "localhost";
   std::string username = "default";
   std::string port = "3010";
-    
+
   int opt = 0;
-  while ((opt = getopt(argc, argv, "h:u:p:")) != -1){
-    switch(opt) {
+  while ((opt = getopt(argc, argv, "h:u:p:")) != -1)
+  {
+    switch (opt)
+    {
     case 'h':
-      hostname = optarg;break;
+      hostname = optarg;
+      break;
     case 'u':
-      username = optarg;break;
+      username = optarg;
+      break;
     case 'p':
-      port = optarg;break;
+      port = optarg;
+      break;
     default:
       std::cout << "Invalid Command Line Argument\n";
     }
   }
-      
+
   std::cout << "Logging Initialized. Client starting...";
-  
+
   Client myc(hostname, username, port);
-  
+
   myc.run();
-  
+
   return 0;
 }
