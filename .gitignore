@@ -63,3 +63,4 @@ coordinator*
 
 # User Files
 *.txt
+.DS_Store
