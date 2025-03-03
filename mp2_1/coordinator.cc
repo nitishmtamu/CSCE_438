@@ -81,7 +81,35 @@ bool zNode::isActive(){
 class CoordServiceImpl final : public CoordService::Service {
 
     Status Heartbeat(ServerContext* context, const ServerInfo* serverinfo, Confirmation* confirmation) override {
-        // Your code here
+        int serverID = serverinfo->serverID();
+        std::string hostname = serverinfo->hostname();
+        std::string port = serverinfo->port();
+        std::string type = serverinfo->type();
+
+        auto metadata = context->client_metadata();
+        auto clusterIDIter = metadata.find("clusterid");
+
+        v_mutex.lock();
+        if(clusterIDIter == metadata.end()){
+            bool found = false;
+            for (auto& c : clusters) {
+                for (auto& z : c) {
+                    if (z->serverID == serverID) {
+                        z->last_heartbeat = getTimeNow();
+                        z->missed_heartbeat = false;
+                        found = true;
+                        break;
+                    }
+                }
+                if (found) break;
+            }
+        }
+        else{
+            int clusterID = std::stoi(std::string(clusterIDIter->second.data(), clusterIDIter->second.size()));
+            clusters[clusterID - 1].push_back(new zNode{serverID, hostname, port, type, getTimeNow(), false});
+        }
+        v_mutex.unlock();
+
         return Status::OK;
     }
 
@@ -89,7 +117,20 @@ class CoordServiceImpl final : public CoordService::Service {
     //this function assumes there are always 3 clusters and has math
     //hardcoded to represent this.
     Status GetServer(ServerContext* context, const ID* id, ServerInfo* serverinfo) override {
-        // Your code here
+        int clientId = id->id();
+        int clusterId = ((clientId - 1) % 3) + 1;
+        int serverId = 0;
+
+        v_mutex.lock();
+
+        zNode* server = clusters[clusterId - 1][serverId];
+        serverinfo->set_serverid(server->serverID);
+        serverinfo->set_hostname(server->hostname);
+        serverinfo->set_port(server->port);
+        serverinfo->set_type(server->type);
+        
+        v_mutex.unlock();
+
         return Status::OK;
     }
 

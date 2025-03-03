@@ -44,6 +44,9 @@
 #include <sstream>
 #include <stdlib.h>
 #include <unistd.h>
+#include <thread>
+#include <atomic>
+
 #include <google/protobuf/util/time_util.h>
 #include <grpc++/grpc++.h>
 #include <glog/logging.h>
@@ -52,6 +55,7 @@
   google::FlushLogFiles(google::severity);
 
 #include "sns.grpc.pb.h"
+#include "coordinator.grpc.pb.h"
 
 using csce438::ListReply;
 using csce438::Message;
@@ -352,7 +356,7 @@ class SNSServiceImpl final : public SNSService::Service
   }
 };
 
-void RunServer(std::string port_no)
+void RunServer(std::string clusterId, std::string serverId, std::string port_no, std::string coordinatorIP, std::string coordinatorPort)
 {
   std::string server_address = "0.0.0.0:" + port_no;
   SNSServiceImpl service;
@@ -364,8 +368,47 @@ void RunServer(std::string port_no)
   std::cout << "Server listening on " << server_address << std::endl;
   log(INFO, "Server listening on " + server_address);
 
+  std::atomic<bool> alive = true;
+
+  std::thread heartbeat([&]() {
+    bool registered = false;
+    std::string coordinator_address = coordinatorIP + ":" + coordinatorPort;
+    while (alive.load()) {
+      std::unique_ptr<CoordService::Stub> stub = CoordService::NewStub(grpc::CreateChannel(coordinator_address, grpc::InsecureChannelCredentials()));
+
+      ServerInfo request;
+      request.set_serverid(serverId);
+      request.set_hostname("0.0.0.0");
+      request.set_port(port_no);
+      request.set_type("S");
+
+      if (!registered){
+        grpc::ClientContext context;
+        context.AddMetadata("clusterid", std::to_string(clusterId));
+      }
+
+      Confirmation reply;
+      grpc::Status status = stub->Heartbeat(&context, request, &reply);
+
+      if (status.ok()) {
+        log(INFO, "Heartbeat sent successfully.");
+        if (!registered){
+          registered = true;
+        }
+      } else {
+        log(ERROR, "Heartbeat failed: " + status.error_message());
+      }
+
+      std::this_thread::sleep_for(std::chrono::seconds(5));
+    }
+  });
+
   server->Wait();
+
+  alive = false;
+  heartbeat.join();
 }
+
 
 int main(int argc, char **argv)
 {
@@ -377,6 +420,18 @@ int main(int argc, char **argv)
   {
     switch (opt)
     {
+    case 'c':
+      clusterId = atoi(optarg);
+      break;
+    case 's':
+      serverId = atoi(optarg);
+      break;
+    case 'h':
+      coordinatorIP = optarg;
+      break;
+    case 'k':
+      coordinatorPort = optarg;
+      break;
     case 'p':
       port = optarg;
       break;
@@ -388,7 +443,7 @@ int main(int argc, char **argv)
   std::string log_file_name = std::string("server-") + port;
   google::InitGoogleLogging(log_file_name.c_str());
   log(INFO, "Logging Initialized. Server starting...");
-  RunServer(port);
+  RunServer(clusterId, serverId, port, coordinatorIP, coordinatorPort);
 
   return 0;
 }

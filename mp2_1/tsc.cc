@@ -378,9 +378,12 @@ void Client::Timeline(const std::string &username)
 int main(int argc, char **argv)
 {
 
-  std::string hostname = "localhost";
+  std::string coordinatorIP = "localhost";
+  std::string coordinatorPort = "3010";
   std::string username = "default";
-  std::string port = "3010";
+
+
+  $./tsc -h <coordinatorIP> -k <coordinatorPort> -u <userId>
 
   int opt = 0;
   while ((opt = getopt(argc, argv, "h:u:p:")) != -1)
@@ -388,23 +391,35 @@ int main(int argc, char **argv)
     switch (opt)
     {
     case 'h':
-      hostname = optarg;
+      coordinatorIP = optarg;
+      break;
+    case 'k': 
+      coordinatorPort = optarg;
       break;
     case 'u':
       username = optarg;
-      break;
-    case 'p':
-      port = optarg;
       break;
     default:
       std::cout << "Invalid Command Line Argument\n";
     }
   }
 
+  std::string coordinator_address = coordinatorIP + ":" + coordinatorPort;
+  std::unique_ptr<CoordService::Stub> stub = CoordService::NewStub(grpc::CreateChannel(coordinator_address, grpc::InsecureChannelCredentials()));
+  
+  csce438::ID id;
+  id.set_id(atoi(username.c_str()));
+  csce438::ServerInfo serverInfo;
+
+  grpc::ClientContext context;
+  grpc::Status status = stub->GetServer(&context, id, &serverInfo);
+
+  std::string hostname = serverInfo.hostname();
+  std::string port = serverInfo.port();
+
   std::cout << "Logging Initialized. Client starting...";
 
   Client myc(hostname, username, port);
-
   myc.run();
 
   return 0;
