@@ -390,9 +390,8 @@ int main(int argc, char **argv)
   std::string coordinatorPort = "3010";
   std::string username = "default";
 
-  $./ tsc - h<coordinatorIP> - k<coordinatorPort> - u<userId>
 
-      int opt = 0;
+  int opt = 0;
   while ((opt = getopt(argc, argv, "h:k:u:")) != -1)
   {
     switch (opt)
