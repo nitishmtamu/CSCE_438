@@ -81,7 +81,7 @@ bool zNode::isActive(){
 class CoordServiceImpl final : public CoordService::Service {
 
     Status Heartbeat(ServerContext* context, const ServerInfo* serverinfo, Confirmation* confirmation) override {
-        int serverID = serverinfo->serverID();
+        int serverID = serverinfo->serverid();
         std::string hostname = serverinfo->hostname();
         std::string port = serverinfo->port();
         std::string type = serverinfo->type();

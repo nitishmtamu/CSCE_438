@@ -9,17 +9,25 @@
 #include "client.h"
 
 #include "sns.grpc.pb.h"
-using csce438::ListReply;
-using csce438::Message;
-using csce438::Reply;
-using csce438::Request;
-using csce438::SNSService;
+
 using grpc::Channel;
 using grpc::ClientContext;
 using grpc::ClientReader;
 using grpc::ClientReaderWriter;
 using grpc::ClientWriter;
 using grpc::Status;
+
+using csce438::Confirmation;
+using csce438::CoordService;
+using csce438::ID;
+using csce438::ListReply;
+using csce438::Message;
+using csce438::Reply;
+using csce438::Request;
+using csce438::ServerInfo;
+using csce438::ServerList;
+using csce438::SNSService;
+using csce438::SynchService;
 
 void sig_ignore(int sig)
 {
@@ -351,22 +359,22 @@ void Client::Timeline(const std::string &username)
     displayPostMessage(initial_posts.username(), initial_posts.msg(), time);
   }
 
-  std::thread writer_thread([stream, this, username](){
+  std::thread writer_thread([stream, this, username]()
+                            {
     while (true) {
       std::string message = getPostMessage();
       Message msg = MakeMessage(username, message);
       stream->Write(msg);
-    }
-  });
+    } });
 
-  std::thread reader_thread([stream, this](){
+  std::thread reader_thread([stream, this]()
+                            {
     Message msg;
     while (stream->Read(&msg)) {
       google::protobuf::Timestamp timestamp = msg.timestamp();
         std::time_t time = timestamp.seconds();
         displayPostMessage(msg.username(), msg.msg(), time);
-    } 
-  });
+    } });
 
   writer_thread.join();
   reader_thread.join();
@@ -382,31 +390,33 @@ int main(int argc, char **argv)
   std::string coordinatorPort = "3010";
   std::string username = "default";
 
+  $./ tsc - h<coordinatorIP> - k<coordinatorPort> - u<userId>
 
-  $./tsc -h <coordinatorIP> -k <coordinatorPort> -u <userId>
-
-  int opt = 0;
-  while ((opt = getopt(argc, argv, "h:u:p:")) != -1)
+      int opt = 0;
+  while ((opt = getopt(argc, argv, "h:k:u:")) != -1)
   {
     switch (opt)
     {
     case 'h':
       coordinatorIP = optarg;
       break;
-    case 'k': 
+    case 'k':
       coordinatorPort = optarg;
       break;
     case 'u':
       username = optarg;
       break;
     default:
-      std::cout << "Invalid Command Line Argument\n";
+      std::cerr << "Invalid Command Line Argument\n";
+      log(ERROR, "Invalid Command Line Argument");
+
+      return 1;
     }
   }
 
   std::string coordinator_address = coordinatorIP + ":" + coordinatorPort;
-  std::unique_ptr<CoordService::Stub> stub = CoordService::NewStub(grpc::CreateChannel(coordinator_address, grpc::InsecureChannelCredentials()));
-  
+  std::unique_ptr<csce438::CoordService::Stub> stub = csce438::CoordService::NewStub(grpc::CreateChannel(coordinator_address, grpc::InsecureChannelCredentials()));
+
   csce438::ID id;
   id.set_id(atoi(username.c_str()));
   csce438::ServerInfo serverInfo;

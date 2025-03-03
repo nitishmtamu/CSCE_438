@@ -57,11 +57,6 @@
 #include "sns.grpc.pb.h"
 #include "coordinator.grpc.pb.h"
 
-using csce438::ListReply;
-using csce438::Message;
-using csce438::Reply;
-using csce438::Request;
-using csce438::SNSService;
 using google::protobuf::Duration;
 using google::protobuf::Timestamp;
 using grpc::Server;
@@ -71,6 +66,18 @@ using grpc::ServerReader;
 using grpc::ServerReaderWriter;
 using grpc::ServerWriter;
 using grpc::Status;
+
+using csce438::Confirmation;
+using csce438::CoordService;
+using csce438::ID;
+using csce438::ListReply;
+using csce438::Message;
+using csce438::Reply;
+using csce438::Request;
+using csce438::ServerInfo;
+using csce438::ServerList;
+using csce438::SNSService;
+using csce438::SynchService;
 
 struct Client
 {
@@ -370,13 +377,14 @@ void RunServer(std::string clusterId, std::string serverId, std::string port_no,
 
   std::atomic<bool> alive = true;
 
-  std::thread heartbeat([&]() {
+  std::thread heartbeat([&]()
+                        {
     bool registered = false;
     std::string coordinator_address = coordinatorIP + ":" + coordinatorPort;
     while (alive.load()) {
-      std::unique_ptr<CoordService::Stub> stub = CoordService::NewStub(grpc::CreateChannel(coordinator_address, grpc::InsecureChannelCredentials()));
+      std::unique_ptr<csce438::CoordService::Stub> stub = csce438::CoordService::NewStub(grpc::CreateChannel(coordinator_address, grpc::InsecureChannelCredentials()));
 
-      ServerInfo request;
+      csce438::ServerInfo request;
       request.set_serverid(serverId);
       request.set_hostname("0.0.0.0");
       request.set_port(port_no);
@@ -387,7 +395,7 @@ void RunServer(std::string clusterId, std::string serverId, std::string port_no,
         context.AddMetadata("clusterid", std::to_string(clusterId));
       }
 
-      Confirmation reply;
+      csce438::Confirmation reply;
       grpc::Status status = stub->Heartbeat(&context, request, &reply);
 
       if (status.ok()) {
@@ -400,8 +408,7 @@ void RunServer(std::string clusterId, std::string serverId, std::string port_no,
       }
 
       std::this_thread::sleep_for(std::chrono::seconds(5));
-    }
-  });
+    } });
 
   server->Wait();
 
@@ -409,14 +416,17 @@ void RunServer(std::string clusterId, std::string serverId, std::string port_no,
   heartbeat.join();
 }
 
-
 int main(int argc, char **argv)
 {
 
+  int clusterId = 1;
+  int serverId = 1;
+  std::string coordinatorIP = "localhost";
+  std::string coordinatorPort = "3010";
   std::string port = "3010";
 
   int opt = 0;
-  while ((opt = getopt(argc, argv, "p:")) != -1)
+  while ((opt = getopt(argc, argv, "c:s:h:k:p:")) != -1)
   {
     switch (opt)
     {
@@ -436,7 +446,9 @@ int main(int argc, char **argv)
       port = optarg;
       break;
     default:
-      std::cerr << "Invalid Command Line Argument\n";
+      std::cout << "Invalid Command Line Argument\n";
+      log(ERROR, "Invalid Command Line Argument");
+      return 1;
     }
   }
 
