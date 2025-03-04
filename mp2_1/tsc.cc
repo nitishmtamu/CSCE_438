@@ -169,9 +169,8 @@ IReply Client::processCommand(std::string &input)
   }
   else if (input == "TIMELINE")
   {
-    processTimeline();
-    ire.grpc_status = grpc::Status::OK;
-    ire.comm_status = SUCCESS;
+    // timeline has no way to return a reply
+    ire = List();
   }
   else
   {
@@ -358,7 +357,6 @@ void Client::Timeline(const std::string &username)
   
   Message init = MakeMessage(username, "INIT");
   stream->Write(init);
-  std::cout << "Now you are in the timeline" << std::endl;
 
   Message initial_posts;
   while (stream->Read(&initial_posts) && initial_posts.msg() != "DONE")
