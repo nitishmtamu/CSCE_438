@@ -169,7 +169,8 @@ IReply Client::processCommand(std::string &input)
   }
   else if (input == "TIMELINE")
   {
-    ire.grpc_status = Status::OK;
+    processTimeline();
+    ire.grpc_status = grpc::Status::OK;
     ire.comm_status = SUCCESS;
   }
   else
@@ -354,7 +355,8 @@ void Client::Timeline(const std::string &username)
 
   ClientContext context;
   std::shared_ptr<ClientReaderWriter<Message, Message>> stream(stub_->Timeline(&context));
-
+  std::cout << "Now you are in the timeline" << std::endl;
+  
   Message init = MakeMessage(username, "INIT");
   stream->Write(init);
 
