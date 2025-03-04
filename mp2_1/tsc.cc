@@ -355,10 +355,10 @@ void Client::Timeline(const std::string &username)
 
   ClientContext context;
   std::shared_ptr<ClientReaderWriter<Message, Message>> stream(stub_->Timeline(&context));
-  std::cout << "Now you are in the timeline" << std::endl;
   
   Message init = MakeMessage(username, "INIT");
   stream->Write(init);
+  std::cout << "Now you are in the timeline" << std::endl;
 
   Message initial_posts;
   while (stream->Read(&initial_posts) && initial_posts.msg() != "DONE")
