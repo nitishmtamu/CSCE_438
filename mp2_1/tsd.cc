@@ -419,8 +419,8 @@ void RunServer(std::string clusterId, std::string serverId, std::string port_no,
 int main(int argc, char **argv)
 {
 
-  int clusterId = 1;
-  int serverId = 1;
+  std::string clusterId = "1";
+  std::string serverId = "1";
   std::string coordinatorIP = "localhost";
   std::string coordinatorPort = "3010";
   std::string port = "3010";
@@ -431,10 +431,10 @@ int main(int argc, char **argv)
     switch (opt)
     {
     case 'c':
-      clusterId = atoi(optarg);
+      clusterId = optarg;
       break;
     case 's':
-      serverId = atoi(optarg);
+      serverId = optarg;
       break;
     case 'h':
       coordinatorIP = optarg;

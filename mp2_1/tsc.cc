@@ -5,10 +5,17 @@
 #include <string>
 #include <unistd.h>
 #include <csignal>
-#include <grpc++/grpc++.h>
 #include "client.h"
 
+#include <google/protobuf/util/time_util.h>
+#include <grpc++/grpc++.h>
+#include <glog/logging.h>
+#define log(severity, msg) \
+  LOG(severity) << msg;    \
+  google::FlushLogFiles(google::severity);
+
 #include "sns.grpc.pb.h"
+#include "coordinator.grpc.pb.h"
 
 using grpc::Channel;
 using grpc::ClientContext;
@@ -408,7 +415,6 @@ int main(int argc, char **argv)
     default:
       std::cerr << "Invalid Command Line Argument\n";
       log(ERROR, "Invalid Command Line Argument");
-
       return 1;
     }
   }
