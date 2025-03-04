@@ -363,7 +363,7 @@ class SNSServiceImpl final : public SNSService::Service
   }
 };
 
-void RunServer(std::string clusterId, std::string serverId, std::string port_no, std::string coordinatorIP, std::string coordinatorPort)
+void RunServer(int clusterId, int serverId, std::string port_no, std::string coordinatorIP, std::string coordinatorPort)
 {
   std::string server_address = "0.0.0.0:" + port_no;
   SNSServiceImpl service;
@@ -390,8 +390,8 @@ void RunServer(std::string clusterId, std::string serverId, std::string port_no,
       request.set_port(port_no);
       request.set_type("S");
 
+      grpc::ClientContext context;
       if (!registered){
-        grpc::ClientContext context;
         context.AddMetadata("clusterid", std::to_string(clusterId));
       }
 
@@ -419,8 +419,8 @@ void RunServer(std::string clusterId, std::string serverId, std::string port_no,
 int main(int argc, char **argv)
 {
 
-  std::string clusterId = "1";
-  std::string serverId = "1";
+  int clusterId = 1;
+  int serverId = 1;
   std::string coordinatorIP = "localhost";
   std::string coordinatorPort = "3010";
   std::string port = "3010";
@@ -431,10 +431,10 @@ int main(int argc, char **argv)
     switch (opt)
     {
     case 'c':
-      clusterId = optarg;
+      clusterId = atoi(optarg);
       break;
     case 's':
-      serverId = optarg;
+      serverId = atoi(optarg);
       break;
     case 'h':
       coordinatorIP = optarg;
