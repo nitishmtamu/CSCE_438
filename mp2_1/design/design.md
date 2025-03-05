@@ -50,59 +50,20 @@ To run the server with glog messages:
 
 ### 1. Coordinator
 
-The server is responsible for managing user accounts, handling follow/unfollow requests, and maintaining user timelines. It provides the following gRPC services:
+The system uses heartbeat messages to ensure that the servers are alive and functioning correctly. The `GetServer` function is used by the client to retrieve the server information before establishing a connection.
 
-- `Login(Request) returns (Reply)`: Handles user login requests.
-- `List(Request) returns (ListReply)`: Returns a list of all users and the followers of the requesting user.
-- `Follow(Request) returns (Reply)`: Allows a user to follow another user.
-- `UnFollow(Request) returns (Reply)`: Allows a user to unfollow another user.
-- `Timeline(stream Message) returns (stream Message)`: Handles bidirectional streaming for user timelines.
+#### Heartbeat Implementation
 
-#### Server Implementation
+`Heartbeat`: Receives heartbeat messages from servers. It updates the last heartbeat time and missed heartbeat status for the server. If the server is new, it adds the server to the appropriate cluster based on the metadata received.
 
-The server is implemented in `tsd.cc` and uses the following classes and functions:
+On the server side, a new thread is created to send heartbeat messages periodically. The first heartbeat message sent by the server includes the necessary context to register the server with the coordinator.
 
-- `SNSServiceImpl`: Implements the gRPC service methods.
-  - `Login`: Handles user login requests. Checks if the user is already connected or never existed. If the user never existed, creates a new user and sets it to connected. If the user is already connected, the connection fails.
-  - `List`: Returns a list of all users and the followers of the requesting user.
-  - `Follow`: Allows a user to follow another user. Updates the `client_db` by adding the follower to the user's followers list and the user to the follower's following list.
-  - `UnFollow`: Allows a user to unfollow another user. Updates the `client_db` by removing the follower from the user's followers list and the user from the follower's following list.
-  - `Timeline`: Handles bidirectional streaming for user timelines. The client sends an init message to retrieve any posts that were already sent from the `<user>_following.txt` files. Updates the `client_db` by setting the current client's stream to the stream passed in. Transitions to updating the followers' timelines whenever something is posted and also writes to the followers' timeline files.
-- `Client`: Represents a user in the system.
-- `getClient`: Retrieves a `Client` object by username.
-- `appendTo`: Appends a message to a user's timeline file.
-- `getLastNPosts`: Retrieves the last N posts from a user's following timeline file.
+#### GetServer Implementation
 
-### 2. Client
+`GetServer`: Retrieves the correct server information based on a formula: ((clientId - 1) % 3) + 1
+Once the correctId is generated, we send the ServerInfo to the client from our array of zNodes
 
-The client allows users to interact with the server, follow/unfollow other users, list users and followers, and post messages to their timelines. It provides the following commands:
-
-- `FOLLOW <username>`: Follows the specified user.
-- `UNFOLLOW <username>`: Unfollows the specified user.
-- `LIST`: Lists all users and the followers of the current user.
-- `TIMELINE`: Enters timeline mode, allowing the user to post messages and see messages from users they follow.
-
-#### Client Implementation
-
-The client is implemented in `tsc.cc` and uses the following classes and functions:
-
-- `Client`: Implements the client functionality.
-  - `connectTo`: Connects to the server and logs in the user. Creates a stub for the gRPC service and calls the `Login` method.
-  - `processCommand`: Processes user commands and calls the appropriate service methods. Parses the input command and calls the corresponding method (`Follow`, `UnFollow`, `List`, or `Timeline`).
-  - `processTimeline`: Enters timeline mode and handles posting and receiving messages. Calls the `Timeline` method and handles bidirectional streaming.
-  - `Login`: Logs in the user. Sends a login request to the server and handles the response.
-  - `List`: Lists all users and the followers of the current user. Sends a list request to the server and handles the response.
-  - `Follow`: Follows the specified user. Sends a follow request to the server and handles the response.
-  - `UnFollow`: Unfollows the specified user. Sends an unfollow request to the server and handles the response.
-  - `Timeline`: Handles bidirectional streaming for user timelines. Sends an init message to the server to retrieve any posts that were already sent from the `U_following.txt` files. Updates the `client_db` by setting the current client's stream to the stream passed in. Transitions to updating the followers' timelines whenever something is posted and also writes to the followers' timeline files.
-- `IClient`: Provides an interface for the client.
-  - `run`: Runs the client. Displays the client title and command list, gets commands from the user, and processes the commands.
-  - `displayTitle`: Displays the client title and command list.
-  - `getCommand`: Gets a command from the user.
-  - `displayCommandReply`: Displays the result of a command.
-  - `toUpperCase`: Converts a string to uppercase.
-- `getPostMessage`: Gets a message from the user.
-- `displayPostMessage`: Displays a message from another user.
+On the client side the `GetServer` function is crucial to establish a connection with the correct server. Before connecting to the server, the client calls the `GetServer` function to obtain the server information, ensuring a successful connection to the appropriate server in the cluster.
 
 ## Test Cases
 

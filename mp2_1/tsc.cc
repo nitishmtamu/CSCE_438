@@ -169,7 +169,7 @@ IReply Client::processCommand(std::string &input)
   }
   else if (input == "TIMELINE")
   {
-    // timeline has no way to return a reply
+    // timeline has no way to return a reply so we use list to test connection
     ire = List();
   }
   else
