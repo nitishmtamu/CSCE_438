@@ -426,6 +426,7 @@ int main(int argc, char **argv)
   id.set_id(atoi(username.c_str()));
   csce438::ServerInfo serverInfo;
 
+  log(INFO, "Getting server info from coordinator");
   grpc::ClientContext context;
   grpc::Status status = stub->GetServer(&context, id, &serverInfo);
 

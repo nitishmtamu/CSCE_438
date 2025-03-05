@@ -4,11 +4,11 @@
 
     docker build --platform linux/arm64 -t csce438_env .
 
-    docker run -it --name csce438_container -v $(pwd)/mp1_skeleton:/home/csce438/mp1_skeleton csce438_env
+    docker run -it --name csce438_mp2_1_container -v $(pwd)/mp2_1:/home/csce438/mp2_1 liuyidockers/csce438_env:latest
 
     ./setup-438-env.sh
 
-    cd mp1_skeleton
+    cd mp2_1
 
 ## Run
 
@@ -20,27 +20,35 @@ To clear the directory (and remove .txt files):
 
     make clean
 
+To run the coordinator without glog messages:
+
+    ./coordinator -p <portNum>
+
+To run the coordinator with glog messages:
+
+    GLOG_logtostderr=1 ./coordinator -p 9090
+
 To run the server without glog messages (port number is optional):
 
-    ./tsd <-p port>
+    ./tsd -c <clusterId> -s <serverId> -h <coordinatorIP> -k <coordinatorPort> -p <portNum>
 
 To run the server with glog messages:
 
-    GLOG_logtostderr=1 ./tsd <-p port>
+    GLOG_logtostderr=1 ./tsd -c <clusterId> -s <serverId> -h <coordinatorIP> -k <coordinatorPort> -p <portNum>
 
-To run the client (port number and host address are optional), you need to open another terminal window, and enter into the launched docker container:
+To run the client, you need to open another terminal window, and enter into the launched docker container:
 
     docker exec -it csce438_container bash
-    cd mp1_skeleton
-    ./tsc <-h host_addr -p port> -u user1
+    cd mp2_1
+    ./tsc -h <coordinatorIP> -k <coordinatorPort> -u <userId>
 
 To run the server with glog messages:
 
-    GLOG_logtostderr=1 ./tsc <-h host_addr -p port> -u user1
+    GLOG_logtostderr=1 ./tsc -h <coordinatorIP> -k <coordinatorPort> -u <userId>
 
 ## Components
 
-### 1. Server
+### 1. Coordinator
 
 The server is responsible for managing user accounts, handling follow/unfollow requests, and maintaining user timelines. It provides the following gRPC services:
 
@@ -98,41 +106,15 @@ The client is implemented in `tsc.cc` and uses the following classes and functio
 
 ## Test Cases
 
-### 0.
-
-![UI Step 1](images/t0u1.png)
-![UI Step 2](images/t0u2.png)
-
 ### 1.
 
 ![UI Step 1](images/t1u1.png)
-![UI Step 2](images/t1u2.png)
-![UI Step 3](images/t1u3.png)
 
 ### 2.
 
 ![UI Step 1](images/t2u1.png)
-![UI Step 2](images/t2u2.png)
-![UI Step 3](images/t2u3.png)
 
 ### 3.
 
 ![UI Step 1](images/t3u1.png)
 ![UI Step 2](images/t3u2.png)
-![UI Step 3](images/t3u3.png)
-
-### 4.
-
-![UI Step 1](images/t4u1.png)
-![UI Step 2](images/t4u2.png)
-![UI Step 3](images/t4u3.png)
-
-### 5.
-
-![UI Step 4](images/t5u4.png)
-![UI Step 5](images/t5u5.png)
-![UI Step 6](images/t5u6.png)
-![UI Step 7](images/t5u7.png)
-![UI Step 8](images/t5u8.png)
-![UI Step 9](images/t5u9.png)
-![UI Step 10](images/t5u10.png)

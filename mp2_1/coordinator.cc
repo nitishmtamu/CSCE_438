@@ -20,6 +20,10 @@
 #include <unistd.h>
 #include <google/protobuf/util/time_util.h>
 #include <grpc++/grpc++.h>
+#include <glog/logging.h>
+#define log(severity, msg) \
+  LOG(severity) << msg;    \
+  google::FlushLogFiles(google::severity);
 
 #include "coordinator.grpc.pb.h"
 #include "coordinator.pb.h"
@@ -95,6 +99,7 @@ class CoordServiceImpl final : public CoordService::Service {
             for (auto& c : clusters) {
                 for (auto& z : c) {
                     if (z->serverID == serverID) {
+                        log(INFO, "Heartbeat received from server " + std::to_string(serverID));
                         z->last_heartbeat = getTimeNow();
                         z->missed_heartbeat = false;
                         found = true;
@@ -105,6 +110,7 @@ class CoordServiceImpl final : public CoordService::Service {
             }
         }
         else{
+            log(INFO, "Heartbeat received from server " + std::to_string(serverID));
             int clusterID = std::stoi(std::string(clusterIDIter->second.data(), clusterIDIter->second.size()));
             clusters[clusterID - 1].push_back(new zNode{serverID, hostname, port, type, getTimeNow(), false});
         }
@@ -123,6 +129,7 @@ class CoordServiceImpl final : public CoordService::Service {
 
         v_mutex.lock();
 
+        log(INFO, "GetServer called for client " + std::to_string(clientId) + " for server in cluster " + std::to_string(clusterId));
         zNode* server = clusters[clusterId - 1][serverId];
         serverinfo->set_serverid(server->serverID);
         serverinfo->set_hostname(server->hostname);
