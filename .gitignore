@@ -58,6 +58,7 @@ dkms.conf
 sns*
 !sns.proto
 coordinator*
+!coordinator.cc
 !coordinator.proto
 
 
