@@ -89,10 +89,10 @@ To avoid the inteferences from residual files, in `csce438_mp2_2_container`:
 
 ## 5.1 Buggy rabbitMQ skeleton code in synchronizer.cc
 
-Thanks for our classmate Ivan Zaplatar: 
+Thanks to our classmate Ivan Zaplatar: 
 
-> * we shouldn't consume from anyone elses queue except ours as that would prevent another synchronizer from reading that message. 
-> *  Secondly, amqp_consume_message() takes an envelope argument which is a amqp_envelope_t and has information on which queue the message was consumed from which wasn't being used in the starter code. So calling amqp_consume_message() could give us three different kinds of messages, 2 of which wouldn't be the message we wanted. That's why I saw wrong messages because we never used the amqp_envelope_t to correctly route our data. I now instead have a single consumeMessages() function that consumes a message then routes it accordingly after inspecting the envelope.
+> * Firstly, we shouldn't consume from anyone elses queue except ours as that would prevent another synchronizer from reading that message. 
+> * Secondly, amqp_consume_message() takes an envelope argument which is a amqp_envelope_t and has information on which queue the message was consumed from which wasn't being used in the starter code. So calling amqp_consume_message() could give us three different kinds of messages, 2 of which wouldn't be the message we wanted. That's why I saw wrong messages because we never used the amqp_envelope_t to correctly route our data. I now instead have a single consumeMessages() function that consumes a message then routes it accordingly after inspecting the envelope.
 
 ## 5.2 The original slave Syncrhonizer F_S2 becomes a master Synchronizer on cluster 2
 
