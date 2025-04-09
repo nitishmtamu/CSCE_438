@@ -57,6 +57,7 @@
     "variant": "cpp",
     "algorithm": "cpp",
     "unordered_set": "cpp",
-    "atomic": "cpp"
+    "atomic": "cpp",
+    "type_traits": "cpp"
   }
 }
