@@ -19,3 +19,6 @@ MP2.1 grades and solution code are released on Canvas: 2:00 PM, March 19 2025. T
 
 ### 3.  8:00 PM, March 07 2025, MP2.2 is released!
 MP2.2 due: 11:59 PM, April 13 2025.
+
+### 4.  6:00 PM, April 13 2025, MP3 is released!
+MP3 due: 11:59 PM, April 27 2025.
