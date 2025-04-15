@@ -101,3 +101,9 @@ Thanks to our classmate Ivan Zaplatar:
 The manual is correct. After the original M2 is killed, the original slave S2 becomes the new Master on cluster 2. Accordingly, the original master Synchronizer F_M2 becomes a slave Synchronizer (and being orphaned) and the original slave synchronizer F_S2 is not a slave synchronizer anymore. Instead, original slave synchronizer F_S2 becomes the master synchronizer for cluster2.
 
 In this way, after you killed the original master server on cluster2, u5 would interact with the new master server (i.e., original slave server) on cluster2. The original slave machine becomes a new master machine. The original synchronizer F_S2 for the original slave machine on cluster2 will be responsible to send u5’s information to other clusters.
+
+## 5.3 Random RabbitMQ Disconnection
+
+> In the buggy skeleton code, a synchronizer process is using a for loop to consume all message queues. This may cause the random RabbitMQ disconnection problem shown below. To address this, as we indicated in the section 5.1 above, the synchronize should push to other queues and only consume its own queue.
+
+![random RabbitMQ disconnection](../images/random_rabbitmq_disconnection_error.png)
