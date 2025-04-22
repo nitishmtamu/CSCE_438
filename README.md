@@ -15,6 +15,10 @@ MP1 grades and solution code are released on Canvas: 07:30 PM, Feb 21 2025. To a
 ### 2.  12:00 AM, Feb 14 2025, MP2.1 is released!
 MP2.1 due: 11:59 PM, Mar 06 2025.
 
+MP2.1 grades and solution code are released on Canvas: 2:00 PM, March 19 2025. To avoid violation of TAMU honor codes and potential plagiarism, please don't distribute the solution code.
 
 ### 3.  8:00 PM, March 07 2025, MP2.2 is released!
-MP2.2 due: 11:59 PM, April 10 2025.
+MP2.2 due: 11:59 PM, April 13 2025.
+
+### 4.  6:00 PM, April 13 2025, MP3 is released!
+MP3 due: 11:59 PM, April 27 2025.
