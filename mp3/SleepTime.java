@@ -24,7 +24,7 @@ public class SleepTime {
         private final static IntWritable one = new IntWritable(1);
         private IntWritable hourBin = new IntWritable();
         private SimpleDateFormat inFmt = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-        private SimpleDateFormat hourFmt = new SimpleDateFormat("H"); // "0"–"23"
+        private SimpleDateFormat hourFmt = new SimpleDateFormat("H"); 
 
         @Override
         protected void map(LongWritable key, org.apache.hadoop.io.Text value, Context context)
