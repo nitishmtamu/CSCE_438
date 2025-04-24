@@ -16,15 +16,15 @@ import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 
 public class TweetTime {
 
-    // Mapper: reads each JSON tweet record (one per line), extracts "created_at",
-    // parses out the hour (0-23), and emits (hour, 1).
+    // Mapper reads each line; when it sees a line beginning "T ",
+    // it parses the timestamp and emits (hour, 1).
     public static class HourMapper
             extends Mapper<LongWritable, Text, Text, IntWritable> {
 
         private final static IntWritable one = new IntWritable(1);
         private Text hourBin = new Text();
-        // Input timestamp format, e.g. "Wed Oct 10 20:19:24 +0000 2018"
-        private SimpleDateFormat inFmt = new SimpleDateFormat("EEE MMM dd HH:mm:ss Z yyyy");
+        // Input timestamp format: "YYYY-MM-DD HH:mm:ss"
+        private SimpleDateFormat inFmt = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
         // Hour of day (0-23)
         private SimpleDateFormat hourFmt = new SimpleDateFormat("H"); // 0-23
 
@@ -32,26 +32,25 @@ public class TweetTime {
         protected void map(LongWritable key, Text value, Context context)
                 throws IOException, InterruptedException {
             String line = value.toString();
-            // crude extraction of created_at field
-            int idx = line.indexOf("\"created_at\":\"");
-            if (idx < 0) return;
-            int start = idx + 14;
-            int end = line.indexOf('"', start);
-            if (end < 0) return;
-            String ts = line.substring(start, end);
-
+            // Only process lines starting with "T "
+            if (!line.startsWith("T ")) {
+                return;
+            }
+            // Extract the timestamp substring
+            // line = "T 2009-06-01 00:00:00"
+            String ts = line.substring(2);
             try {
                 Date d = inFmt.parse(ts);
                 String h = hourFmt.format(d);
                 hourBin.set(h);
                 context.write(hourBin, one);
             } catch (ParseException e) {
-                // ignore malformed timestamp
+                // skip malformed lines
             }
         }
     }
 
-    // Reducer: sums all the 1's for each hour key
+    // Reducer sums the counts for each hour
     public static class SumReducer
             extends Reducer<Text, IntWritable, Text, IntWritable> {
 
@@ -81,7 +80,7 @@ public class TweetTime {
         job.setJarByClass(TweetTime.class);
 
         job.setMapperClass(HourMapper.class);
-        // optional combiner (same as reducer)
+        // optional combiner
         job.setCombinerClass(SumReducer.class);
         job.setReducerClass(SumReducer.class);
 
