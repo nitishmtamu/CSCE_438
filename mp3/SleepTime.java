@@ -10,69 +10,67 @@ import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.Reducer;
-import org.apache.hadoop.mapreduce.lib.input.NLineInputFormat;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 
 public class SleepTime {
 
-    // Mapper: receives exactly 4 lines per record (T, U, W, blank),
-    // looks for "sleep" in the W-line, and if found emits (hour, 1).
     public static class SleepMapper
             extends Mapper<LongWritable, org.apache.hadoop.io.Text, IntWritable, IntWritable> {
 
         private final static IntWritable one = new IntWritable(1);
         private IntWritable hourBin = new IntWritable();
+
+        // For parsing timestamps
         private SimpleDateFormat inFmt = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-        private SimpleDateFormat hourFmt = new SimpleDateFormat("H"); 
+        private SimpleDateFormat hourFmt = new SimpleDateFormat("H"); // 0–23
+
+        // Holds the hour for the current tweet record
+        private int lastHour = -1;
 
         @Override
         protected void map(LongWritable key, org.apache.hadoop.io.Text value, Context context)
                 throws IOException, InterruptedException {
-            String record = value.toString();
-            String[] lines = record.split("\n");
+            String line = value.toString().trim();
 
-            String ts = null;
-            String text = "";
-
-            // Parse the 4-line record
-            for (String line : lines) {
-                line = line.trim();
-                if (line.startsWith("T\t")) {
-                    String[] parts = line.split("\t", 2);
-                    if (parts.length == 2) ts = parts[1];
-                } else if (line.startsWith("W\t")) {
-                    String[] parts = line.split("\t", 2);
-                    if (parts.length == 2) text = parts[1].toLowerCase();
-                }
-            }
-
-            // Only proceed if we saw both timestamp and a tweet containing "sleep"
-            if (ts == null || !text.contains("sleep")) {
+            // Skip header
+            if (line.startsWith("total number:")) {
                 return;
             }
 
-            // Parse timestamp to hour
-            try {
-                Date d = inFmt.parse(ts);
-                int h = Integer.parseInt(hourFmt.format(d));
-                hourBin.set(h);
-                context.write(hourBin, one);
-            } catch (ParseException e) {
-                // skip malformed timestamp
+            // T    YYYY-MM-DD HH:mm:ss
+            if (line.startsWith("T\t")) {
+                String ts = line.substring(2);
+                try {
+                    Date d = inFmt.parse(ts);
+                    lastHour = Integer.parseInt(hourFmt.format(d));
+                } catch (ParseException e) {
+                    lastHour = -1;
+                }
+                return;
             }
+
+            // W    tweet text
+            if (line.startsWith("W\t") && lastHour >= 0) {
+                String text = line.substring(2).toLowerCase();
+                if (text.contains("sleep")) {
+                    hourBin.set(lastHour);
+                    context.write(hourBin, one);
+                }
+            }
+
+            // Ignore U\t… and blank lines
         }
     }
 
-    // Reducer: sums counts for each hour
     public static class SumReducer
             extends Reducer<IntWritable, IntWritable, IntWritable, IntWritable> {
-
         private IntWritable total = new IntWritable();
 
         @Override
-        protected void reduce(IntWritable key, Iterable<IntWritable> values, Context context)
-                throws IOException, InterruptedException {
+        protected void reduce(IntWritable key,
+                              Iterable<IntWritable> values,
+                              Context context) throws IOException, InterruptedException {
             int sum = 0;
             for (IntWritable v : values) sum += v.get();
             total.set(sum);
@@ -80,21 +78,14 @@ public class SleepTime {
         }
     }
 
-    // Driver
     public static void main(String[] args) throws Exception {
         if (args.length != 2) {
             System.err.println("Usage: SleepTime <input path> <output path>");
             System.exit(-1);
         }
         Configuration conf = new Configuration();
-
-        // Process 4 lines per mapper record
-        conf.setInt("mapreduce.input.lineinputformat.linespermap", 4);
         Job job = Job.getInstance(conf, "Sleep Time Histogram");
         job.setJarByClass(SleepTime.class);
-
-        // Use NLineInputFormat with 4 lines per record
-        job.setInputFormatClass(NLineInputFormat.class);
 
         job.setMapperClass(SleepMapper.class);
         job.setCombinerClass(SumReducer.class);
