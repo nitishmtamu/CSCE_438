@@ -3,6 +3,8 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
+import javax.naming.Context;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IntWritable;
@@ -23,29 +25,42 @@ public class TweetTime {
 
         private final static IntWritable one = new IntWritable(1);
         private Text hourBin = new Text();
-        // Input timestamp format: "YYYY-MM-DD HH:mm:ss"
         private SimpleDateFormat inFmt = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-        // Hour of day (0-23)
-        private SimpleDateFormat hourFmt = new SimpleDateFormat("H"); // 0-23
+        private SimpleDateFormat hourFmt = new SimpleDateFormat("H");
 
         @Override
         protected void map(LongWritable key, Text value, Context context)
                 throws IOException, InterruptedException {
-            String line = value.toString();
-            // Only process lines starting with "T "
-            if (!line.startsWith("T ")) {
+
+            String line = value.toString().trim();
+            // 1) Skip the header line
+            if (line.startsWith("total number:")) {
                 return;
             }
-            // Extract the timestamp substring
-            // line = "T 2009-06-01 00:00:00"
-            String ts = line.substring(2);
+
+            // 2) Only process lines whose first character is 'T'
+            if (line.length() < 2 || line.charAt(0) != 'T') {
+                return;
+            }
+
+            // 3) Split on the tab to get the timestamp part
+            //    e.g. "T\t2009-06-01 21:43:59"
+            String[] parts = line.split("\t", 2);
+            if (parts.length < 2) {
+                return;
+            }
+            String ts = parts[1];  // the timestamp
+
+            // count for debugging
+            context.getCounter("TweetTime", "T_lines_seen").increment(1);
+
             try {
                 Date d = inFmt.parse(ts);
                 String h = hourFmt.format(d);
                 hourBin.set(h);
                 context.write(hourBin, one);
             } catch (ParseException e) {
-                // skip malformed lines
+                // malformed timestamp—skip
             }
         }
     }
