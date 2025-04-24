@@ -23,7 +23,7 @@ public class SleepTime {
 
         // For parsing timestamps
         private SimpleDateFormat inFmt = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-        private SimpleDateFormat hourFmt = new SimpleDateFormat("H"); // 0–23
+        private SimpleDateFormat hourFmt = new SimpleDateFormat("H");
 
         // Holds the hour for the current tweet record
         private int lastHour = -1;
