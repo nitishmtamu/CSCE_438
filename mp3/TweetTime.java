@@ -60,7 +60,6 @@ public class TweetTime {
                 hourBin.set(h);
                 context.write(hourBin, one);
             } catch (ParseException e) {
-                // malformed timestamp—skip
             }
         }
     }
