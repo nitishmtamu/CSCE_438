@@ -58,8 +58,6 @@ public class SleepTime {
                     context.write(hourBin, one);
                 }
             }
-
-            // Ignore U\t… and blank lines
         }
     }
 
